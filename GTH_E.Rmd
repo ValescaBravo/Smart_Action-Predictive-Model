@@ -1,0 +1,849 @@
+---
+title: "<span style=color:#008000>Smart Action: Stage 2 - Predictive Model </span>" 
+
+output: html_document
+
+---
+
+
+```{r, librerias}
+
+suppressMessages(suppressWarnings(library(readxl)))
+suppressMessages(suppressWarnings(library(tidyverse)))
+suppressMessages(library(dplyr))
+suppressMessages(library(ggplot2))
+suppressMessages(library(ggplot2))
+suppressMessages(library(ggcorrplot))
+#install.packages("corrr")
+suppressWarnings(library(corrr))
+suppressMessages(library(ggcorrplot))
+suppressMessages(library("FactoMineR"))
+suppressMessages(library(factoextra))
+#install.packages("SmartEDA")
+suppressWarnings(library(SmartEDA))
+suppressMessages(library(plotly))
+library(keras)#networks and recurrent networks
+library(randomForest)#randomForest Algorithm
+library(caTools)
+library(caret)
+
+```
+## <span style=color:#008000>Introduction</span>
+
+This research focuses on tourism in the Basque Country region of Spain. The dataset used is taken from the official website of Basque Country Tourism. The objective is to determine the number of accommodations in the region that have the European Green tag.
+
+The aim of this work is to explore whether it is possible to make predictions using R Studio and various algorithms to determine which algorithm performs the best in this scenario.
+
+```{r, I.1.1- Data load}
+
+
+GTH <- read_excel("~/Magister/TFM/GTH/Alojamientos.xlsx")
+
+#glimpse(GTH)
+
+head(GTH)
+
+```
+Rows: 1,275
+Columns: 42
+
+URLs: Friendly URLs, Physical URL, XML data, XML metadata, Zip
+Binary: Physical functional diversity, Visual functional diversity, Auditory functional diversity, Intellectual functional diversity, Organic functional diversity
+Location: Country, Province, Municipality, Postal Code, GPS coordinates, LONWGS84, LATWGS84, Locality, Phone
+Hotel Attributes: Restaurant, Good practices, Capacity, Product club, Gastronomic activities, Category, Meeting room
+System Classification: Country code, Province code, Municipality code
+
+
+```{r, Check Nan}
+
+#colSums(is.na(GTH))
+
+```
+
+### <span style=color:#008000>I.- Data Cleaning</span>
+
+We will remove columns that will not be used, such as;"Descripción","Teléfono","Dirección", "Email", "WEB", "URL amigable",
+"URL física", "XML datos", "XML metadatos", "Zip", ";7;0", "País" and "Código país"
+
+
+```{r, Datacleaning: Drop}
+
+
+#general columns
+
+
+drops <- c("Descripción", "Actividades Gastronómicas", "Teléfono","Dirección", "Email", "WEB", "URL amigable",
+           "URL física", "XML datos", "XML metadatos", "Zip", ";7;0", "País", "Código país" ) 
+
+GTH <- GTH[ , !(names(GTH) %in% drops)]
+
+
+```
+
+We will identify binary data columns and convert them to numerical format. Among them, the column of particular interest is "Etiqueta Eco" (Eco Label), which takes two values: "Yes" or "No" (whether the hotel has or does not have the European Eco Label). There are also other columns that serve as identifiers to determine whether the hotel meets specific technical specifications for people with disabilities.
+
+```{r, Checking target}
+colnames(GTH)[2] <- "Etiqueta_Eco" # Change name
+
+# Checking our variable
+Hoteles_certificados <- sum(GTH$Etiqueta_Eco== "Si")
+Hoteles_certificados
+
+```
+
+
+```{r, Datacleaning: modify the Added columns}
+#head(GTH)
+
+colnames(GTH)[3] <- "Año_Certificacion" # Change name
+
+#Convert Character column value to binary value
+GTH$Etiqueta_Eco <-ifelse(GTH$Etiqueta_Eco =="Si",1,0)
+
+#mean
+m_AC <-round(mean(GTH$Año_Certificacion, na.rm=TRUE), 0)
+
+# Replacing with mean of the column by Checking Multiple Conditions with the mean of the column
+
+GTH$Año_Certificacion[GTH$Etiqueta_Eco == 1 & is.na(GTH$Año_Certificacion) ] <- m_AC
+
+
+
+```
+
+
+```{r, Datacleaning: Binary }
+colnames(GTH)[6] <- "Div_fun_física" # Change name
+#Convert Character column value to binary value
+GTH$Div_fun_física <-ifelse(GTH$Div_fun_física =="Es practicable para personas con diversidad funcional física",1,0)
+
+colnames(GTH)[7] <- "Div_fun_visual" # Change name
+#Convert Character column value to binary value
+GTH$Div_fun_visual <-ifelse(GTH$Div_fun_visual =="Es practicable para personas con diversidad funcional visual",1,0)
+
+colnames(GTH)[8] <- "Div_fun_auditiva" # Change name
+#Convert Character column value to binary value
+GTH$Div_fun_auditiva <-ifelse(GTH$Div_fun_auditiva =="Es practicable para personas con diversidad funcional auditiva",1,0)
+
+colnames(GTH)[9] <- "Div_fun_intelectual" # Change name
+#Convert Character column value to binary value
+GTH$Div_fun_intelectual <-ifelse(GTH$Div_fun_intelectual =="Está adaptado para personas con diversidad funcional intelectual",1,0)
+
+colnames(GTH)[10] <- "Div_fun_organica" # Change name
+#Convert Character column value to binary value
+GTH$Div_fun_organica <-ifelse(GTH$Div_fun_organica =="Está adaptado para personas con diversidad funcional orgánica",1,0)
+
+```
+
+We will remove null data by replacing them with zeros. These columns indicate whether the hotel in question has or does not have certain physical features, recreational facilities, or services.
+```{r, Data cleaning: Na to cero}
+
+
+GTH$Año_Certificacion[is.na(GTH$Año_Certificacion)] <- 0
+
+colnames(GTH)[11] <- "Buenas_practicas" # Change name
+#Reemplazar valores na  con 0
+GTH$Buenas_practicas[is.na(GTH$Buenas_practicas)] <- 0
+
+
+#
+#Reemplazar valores na  con 0
+GTH$Restaurante[is.na(GTH$Restaurante)] <- 0 #12
+
+
+colnames(GTH)[15] <- "Sala_Reuniones" # Change name
+GTH$Sala_Reuniones[is.na(GTH$Sala_Reuniones)] <- 0
+
+
+colnames(GTH)[16] <- "Club_Producto" # Change name
+GTH$Club_Producto[is.na(GTH$Club_Producto)] <- 0
+
+
+#17
+GTH$Autocaravana[is.na(GTH$Autocaravana)] <- 0
+
+
+colnames(GTH)[18] <- "Visita_Guiada" # Change name
+GTH$Visita_Guiada[is.na(GTH$Visita_Guiada)] <- 0
+
+
+
+GTH$Tienda[is.na(GTH$Tienda)] <- 0
+
+
+GTH$Surfing[is.na(GTH$Surfing)] <- 0
+
+
+#colSums(is.na(GTH))
+
+```
+
+To convert character columns to numeric format in R Studio, you can use the as.numeric() function.
+
+```{r, Data Cleaning: Comulns to numeric}
+
+#Capacidad change numeric
+GTH$Capacidad <- as.numeric(unlist(GTH$Capacidad))
+
+col.Num <- c("Buenas_practicas","Restaurante","Sala_Reuniones", "Club_Producto","Autocaravana", "Visita_Guiada","Tienda","Surfing", "Postal Code","Código municipio","Código provincia", "LONWGS84", "LATWGS84")
+
+suppressWarnings(GTH[col.Num ] <- sapply(GTH[col.Num],as.numeric))
+sapply(GTH, class)
+
+#GTH
+
+
+```
+
+
+```{r, Data cleaning: Na Problems}
+#mean
+m <-mean(GTH$Capacidad, na.rm=TRUE)  # reemplazamos con la media
+# [1] 42.7901
+
+
+
+# Replacing Capacidad by Checking Multiple Conditions 
+GTH$"Postal Code"[GTH$Nombre == "CABAÑAS EN LOS ARBOLES"] <- 48144
+GTH$Capacidad[GTH$Etiqueta_Eco == 1 & is.na(GTH$Capacidad) ] <- 22
+GTH$Autocaravana[GTH$Etiqueta_Eco == 1 & is.na(GTH$Autocaravana) ] <- 0
+GTH$Capacidad[ is.na(GTH$Capacidad) ] <- m                                                  
+GTH$Localidad  <- ifelse(is.na(GTH$Localidad ) | GTH$Localidad  == "", GTH$Etiqueta_Eco, GTH$Localidad)
+
+```
+
+
+```{r, Data cleaning: Dropping  to get the final dataframe}
+
+GTH <- na.omit(GTH)
+
+colSums(is.na(GTH))
+
+
+
+```
+
+
+
+```{r, Data Cleaning: Comulns to Factor}
+
+cols.char <- c("Localidad","Categoría","Tipo de Alojamiento", "Municipio", "Provincia")
+
+GTH[cols.char] <- lapply(GTH[cols.char] , factor)
+#glimpse(GTH)
+
+```
+
+Rows: 959
+Columns: 29
+
+
+### <span style=color:#008000>II.- EDA</span>
+
+
+To explore the relationship between the target variable "Etiqueta_Eco" and the other variables in the dataset, where 1 represents "Yes" and 0 represents "No"
+
+```{r, Plot Variable selected by target, fig.width=10,fig.height=10}
+
+
+plot1 <- ExpCatViz(GTH,
+                   target="Etiqueta_Eco",
+                   fname=NULL,
+                   clim=7,
+                   col=c("slateblue4","slateblue1"),
+                   margin=2,
+                   Page = c(3,3),
+                   sample=NULL)
+plot1[[1]]
+
+
+```
+
+```{r, fig.width=10,fig.height=10}
+
+
+
+
+
+# Define the number of colors you want
+n <- 8
+
+# Generate a color palette with 8 colors
+colorPalette <- rainbow(n)
+
+# Create the visualization using ExpNumViz
+plot2 <- ExpNumViz(GTH,
+                   target = "Etiqueta_Eco",
+                   type = 2,
+                   nlim = 2,
+                   fname = NULL,
+                   col = colorPalette,
+                   Page = c(2, 2),
+                   sample = NULL,
+                   scatter = FALSE,
+                   gtitle = NULL,
+                   theme = "Default")
+plot2[[1]]
+
+
+```
+```{r,Density plot}
+
+
+
+plot3 <- ExpNumViz(GTH,
+                   target = NULL,
+                   type = 2,
+                   nlim = 2,
+                   fname = NULL,
+                   col = rainbow(n),
+                   Page =  c(2,2),
+                   sample = NULL,
+                   scatter = FALSE,
+                   gtitle = NULL,
+                   theme = "Default")
+
+plot3[[1]]
+```
+```{r, Distributions of Numerical variables}
+
+
+
+
+plot4 <- ExpNumViz(GTH,
+                   target="Etiqueta_Eco",
+                   type=1,
+                   nlim=3,
+                   fname=NULL,
+                   col=c("darkgreen","springgreen3","springgreen1"),
+                   Page=c(2,3),
+                   sample = NULL)
+plot4[[1]]
+
+
+
+```
+
+
+### <span style=color:#008000>III.- Heatmap of Correlations and PCA </span>
+
+```{r, Normalizing the data}
+#data numerica
+
+GTH_num <- select_if(GTH, is.numeric)             # Subset numeric columns with dplyr
+#GTH_num
+GTH_num_normalized <- scale(GTH_num)
+head(GTH_num_normalized)
+
+```
+
+```{r, plot correlaciones, fig.width=8,fig.height=8}
+
+corr_matrix <- cor(GTH_num_normalized)
+ggcorrplot(corr_matrix)
+
+```
+
+
+The result of the correlation matrix can be interpreted as follows:
+
+The closer the value is to 1 (in red color), the more positively correlated the two variables are.
+The closer the value is to -1 (in blue color), the more negatively correlated they are.
+
+```{r, Applying PCA}
+
+data.pca <- princomp(corr_matrix) # realizar el PCA
+
+summary(data.pca)# mostrar resultados
+
+```
+
+Each component explains a percentage of the total variance in the dataset. In the Cumulative Proportion section, the first principal component explains nearly 40% of the total variance. 
+
+```{r, plot PCA, Cumulative Proportion}
+fviz_eig(data.pca, addlabels = TRUE)
+```
+
+```{r, PCA results}
+data.pca$loadings[, 1:2]
+```
+The loading matrix shows that for the first and second principal components, there are positive values for the variables "Etiqueta Ecológica" (Eco Label) and "año de certificacion" (certification year), and negative values for the variables related to "Diversidad functional" (functional diversity), "capacidad" (capacity), "tienda" (store), and "longitud" (longitude).
+
+
+```{r, Biplot combined with cos2 }
+fviz_pca_var(data.pca, col.var = "cos2",
+             gradient.cols = c("black", "orange", "green"),
+             repel = TRUE)
+
+```
+We can better understand the relationship between the PCA analysis in R and the attributes with this visualization. The attributes or variables with similar cosine scores will have similar colors. This is achieved by adjusting the col.var function of fviz_pca_var.
+
+Attributes with high cosine scores (cos2) are colored in green.
+Attributes with medium cosine scores have an orange color.
+Finally, attributes with low cosine scores are colored in black.
+
+### <span style=color:#008000>IV.- Modeling </span>
+
+```{r, Datacleaning: Dataframe to modeling}
+# Creating a dataset with PCA recommended variables
+df <- subset(GTH, select = c(Etiqueta_Eco, Club_Producto,Tienda, Buenas_practicas,Sala_Reuniones,Restaurante,Visita_Guiada))
+
+
+# Checking complete cases
+complete_cases <- complete.cases(df)
+# Subsetting the data frame to include only complete cases
+complete_df <- df[complete_cases, ]
+```
+
+
+```{r, Factor}
+
+df1 <- data.frame(lapply(df, factor))
+dim(df)
+
+# download daataframe
+#write.csv(df, file = "df_Modeling.csv")
+
+```
+
+
+
+```{r, Split Dataset}
+
+set.seed(150) # Set a seed for reproducibility
+train_indices <- sample(nrow(df1), nrow(df1) * 0.7)
+
+
+# Create training and testing sets
+train <- df1[train_indices, ]
+test <- df1[-train_indices, ]
+
+train_y = train$Etiqueta_Eco
+test_y = test$Etiqueta_Eco
+
+
+# Create training and testing sets
+train <- subset(train, select = -Etiqueta_Eco)
+test <- subset(test, select = -Etiqueta_Eco)
+
+
+dim(train); dim(test)
+```
+
+#### <span style=color:#008000>1.- Logistic Regression(fit1))</span>
+
+
+
+```{R Logistic Regression Validacion}
+
+fit1 <- glm(train_y ~.,data=train, family = binomial, control = list(maxit = 1000))
+summary(fit1)
+
+```
+```{r plot Logistic Regression model}
+suppressMessages(suppressWarnings(plot(fit1,col="blue")))
+```
+
+
+1.- Residuals vs Fitted Plot: This plot shows the relationship between the residuals and the fitted values of the binary logistic regression model. The residuals represent the differences between the observed values and the values predicted by the model. The y-axis represents the residuals, and the x-axis represents the fitted values. The plot helps to assess whether there is any systematic pattern in the residuals based on the fitted values. If the residuals are randomly scattered around zero without any clear pattern, it indicates that the model fits the data well. However, if any pattern or trend is observed in the residuals, it could indicate that the model does not adequately fit the data.
+
+2.- Normal QQ Plot (Normal Quantile-Quantile): This plot is used to assess whether the model residuals follow a normal distribution. The y-axis represents the observed quantiles of the residuals, and the x-axis represents the expected theoretical quantiles under the assumption of normality. If the residuals follow a normal distribution, the points on the plot should approximate a diagonal line. Significant deviations from the diagonal line may indicate a lack of normality in the residuals.
+
+3.- Scale-Location Plot: This plot is a useful tool for evaluating the homogeneity of variance in the residuals of binary logistic regression, which can help identify issues such as heteroscedasticity and suggest necessary adjustments to improve the model. The points on the plot would scatter randomly around a horizontal line, indicating homogeneity in the variance of the residuals. If any trend or pattern is observed, such as a funnel or fan shape, it may indicate a violation of the assumption of homogeneity of variance. In such cases, consideration of variable transformations, inclusion of additional variables, or alternative models may be necessary to improve model fit.
+
+4.- Residuals vs Leverage Plot: This plot shows the relationship between the standardized residuals and the level of influence of each observation in the model. Standardized residuals are the residuals divided by their standard deviation. The level of influence of an observation is measured using a measure called leverage. In the plot, the y-axis represents the standardized residuals, and the x-axis represents the leverage values. This plot is used to detect outlier or influential observations that may have a disproportionate impact on the model. Observations that are far from the normal range in terms of standardized residuals and/or leverage may indicate data points that need to be examined more closely to determine if they have an excessive effect on the model and whether appropriate actions, such as their exclusion from the analysis, should be taken.
+
+```{r, Logistic Regression VALIDACION}
+
+# Make predictions on test set
+predictions1 <- predict(fit1, newdata = test, type = "response")
+
+# Convert probabilities to class predictions
+predicted_classes <- ifelse(predictions1 > 0.5, 1, 0)
+
+# Convert predicted_classes and test_y to factors with the same levels
+predicted_classes <- factor(predicted_classes, levels = levels(test_y))
+test_y <- factor(test_y, levels = levels(predicted_classes))
+
+```
+
+
+
+
+
+```{r, Confusion Matrix of Logistic Regression, VALIDACION}
+
+# Accuracy
+accuracy <- confusionMatrix(predicted_classes, test_y)$overall['Accuracy']
+
+# Precision
+precision <- confusionMatrix(predicted_classes,test_y)$byClass['Pos Pred Value']
+
+# Recall
+recall <- confusionMatrix(predicted_classes, test_y)$byClass['Sensitivity']
+
+# F1 score
+f1_score <- confusionMatrix(predicted_classes, test_y)$byClass['F1']
+
+# Create the confusion matrix
+conf_mat <- confusionMatrix(predicted_classes, test_y)
+
+plot(conf_mat$table, col = c("#FF0000", "#0000FF"), 
+     main = "Confusion Matrix", xlab = "Predicted", ylab = "Actual",
+     sub = paste("Accuracy:", conf_mat$overall['Accuracy']))
+
+# Add legend
+legend("topright", legend = rownames(conf_mat$table), fill = c("#FF0000", "#0000FF"))
+
+
+
+
+
+```
+```{r Logistic Regression confussion matrix table}
+# Print the evaluation metrics
+print(conf_mat)
+
+```
+
+
+
+```{r, Logistic Regression ROC Curve Analysis}
+library(pROC)
+
+# Calculate ROC curve
+roc_obj <- roc(test_y, predictions1)
+plot(roc_obj, main = "ROC Curve",col = "blue", lwd = 2)
+
+
+
+```
+
+
+
+The analysis of the Receiver Operating Characteristic (ROC) curve is a graphical representation of the performance of a binary classification model. It is commonly used to assess the balance between the true positive rate (sensitivity) and the false positive rate (1 - specificity) at various classification thresholds.
+
+The ROC curve is created by plotting the true positive rate (TPR) on the y-axis against the false positive rate (FPR) on the x-axis. Each point on the curve represents a different classification threshold, which determines how the model assigns predicted class labels based on the predicted probabilities.
+
+Here's how the ROC analysis works:
+
+The classification model assigns predicted probabilities to each instance in the dataset. These probabilities represent the likelihood of belonging to the positive class.
+
+Different classification thresholds can be applied to these predicted probabilities to determine the predicted class labels. By varying the threshold, you can adjust the balance between true positives and false positives.
+
+For each threshold, the TPR (also known as sensitivity or recall) is calculated as the ratio of true positive predictions to the total number of actual positive instances. It represents the model's ability to correctly classify positive instances.
+
+The false positive rate (FPR) is calculated as the ratio of false positive predictions to the total number of actual negative instances. It represents the proportion of negative instances that are incorrectly classified as positive.
+
+Plotting the ROC curve: The ROC curve is created by plotting the TPR against the FPR at various threshold values. Each point on the curve represents a different trade-off between sensitivity and specificity.
+
+Area Under the Curve (AUC) is a metric that summarizes the overall performance of the classification model. It represents the probability that a randomly chosen positive instance is classified higher than a randomly chosen negative instance by the model. AUC values range from 0 to 1, with a higher value indicating better classification performance.
+
+Interpreting the ROC curve:
+
+The closer the curve is to the top-left corner, the better the model's performance.
+A diagonal line from the bottom-left to the top-right represents a random classifier.
+Points above the diagonal line represent classifiers better than random.
+The AUC value provides a single metric to compare the performance of different models, with a higher value indicating better performance.
+The ROC curve analysis provides valuable insights into the performance of a binary classification model and helps you choose an appropriate classification threshold based on your specific sensitivity and specificity requirements.
+
+#### <span style=color:#008000>2.- Random Forest(fit2)</span>
+
+
+```{r  Random Forest}
+# library
+library(randomForest)
+
+# Train Random Forest model
+fit2<- randomForest(train, train_y)
+
+# Predict on test data
+predictions2 <- predict(fit2, test)
+
+# Evaluate model performance
+accuracy <- sum(predictions2 == test_y) / length(predictions2)
+
+
+
+
+```
+
+```{r,Random Forest ConfusionMatrix}
+
+
+
+# Create confusion matrix
+conf_mat <- confusionMatrix(predictions2, test_y)
+
+
+# Plot confusion matrix
+plot(conf_mat$table, col = c("#FF0000", "#0000FF"), 
+     main = "Confusion Matrix", xlab = "Predicted", ylab = "Actual",
+     sub = paste("Accuracy:", conf_mat$overall['Accuracy']))
+
+# legend
+legend("topright", legend = rownames(conf_mat$table), fill = c("#FF0000", "#0000FF"))
+
+```
+```{r  Random Forest confusion matrix Table}
+# Print the evaluation metrics
+print(conf_mat )
+
+
+```
+
+
+```{r  Random Forest ROC plot}
+library(pROC)
+
+test_y <- as.numeric(as.character(test_y))
+predictions2 <- as.numeric(as.character(predictions2))
+
+
+
+# Create ROC object
+roc_obj <- roc(test_y, predictions2)
+
+# Plot ROC curve
+plot(roc_obj, main = "ROC Curve",col = "blue", lwd = 2,  xlab = "False Positive Rate", ylab = "True Positive Rate")
+```
+
+If the ROC curve is a straight line on the diagonal, it indicates that the model cannot effectively discriminate between the positive and negative classes.
+
+This can be due to several reasons, such as:
+
+Imbalanced data: The dataset has an imbalanced class distribution, where one class has significantly fewer samples than the other. In this case, there are only 34 positive cases, which can be affecting the model's ability to learn and make accurate predictions.
+
+Insufficient features: The features or variables used to train the Random Forest model may not be able to distinguish between the classes effectively.
+
+Inappropriate model: Different models have different strengths and weaknesses, and it's possible that another algorithm may be more suitable.
+
+Hyperparameter tuning: The default hyperparameters used in the model may not be optimal for the data. You can try adjusting the hyperparameters of the Random Forest model using techniques like grid search or random search to find the best combination of hyperparameters.
+
+#### <span style=color:#008000>3.- XGBoost </span> 
+
+```{r XGBoost}
+# Load the xgboost package
+library(xgboost)
+
+# Set the seed for reproducibility
+set.seed(123)
+
+
+# Split the data into train and test sets
+train_idx <- sample(nrow(df), 0.7 * nrow(df))
+train_data <- df[train_idx, ]
+test_data <- df[-train_idx, ]
+
+
+# Convert the data to xgb.DMatrix format
+train_matrix <- xgb.DMatrix(data = as.matrix(train_data[-5]), label = train_data$Etiqueta_Eco)
+test_matrix <- xgb.DMatrix(data = as.matrix(test_data[-5]), label = test_data$Etiqueta_Eco)
+
+# Set the parameters for xgboost
+params <- list(
+  objective = "binary:logistic",
+  eval_metric = "auc",
+  alpha = 0,
+  lambda = 0.01,
+  scale_pos_weight = 9
+)
+
+# Train the model with xgb.train and provide a validation set
+model <- xgb.train(params = params, data = train_matrix, nrounds = 10, watchlist = list(train=train_matrix, test=test_matrix), early_stopping_rounds = 3)
+
+
+# Get the prediction from the model
+preds <- predict(model, test_matrix)
+
+# Create a factor vector of predicted classes based on a threshold of 0.5
+pred_class <- factor(ifelse(preds > 0.5, 1, 0))
+
+
+
+# Create a factor vector of predicted classes based on a threshold of 0.5
+pred_class <- factor(ifelse(preds > 0.5, 1, 0))
+```
+
+```{r, XGBoost confusionMatrix}
+# Create a factor vector of predicted classes based on a threshold of 0.5
+pred_class <- factor(ifelse(preds > 0.5, 1, 0))
+
+# Convert the outcome variable to factor with levels 0 and 1
+pred_class <- factor(pred_class, levels = c(0, 1))
+test_y <- factor(test_y, levels = c(0, 1))
+
+# Plot the confusion matrix
+confusion_matrix  <- confusionMatrix(pred_class, test_y)
+accuracy <- confusion_matrix$overall["Accuracy"]
+precision <- confusion_matrix$byClass["Pos Pred Value"]
+recall <- confusion_matrix$byClass["Sensitivity"]
+f1_score <- confusion_matrix$byClass["F1"]
+
+plot(confusion_matrix$table, col = c("#FF0000", "#0000FF"), 
+     main = "Confusion Matrix", xlab = "Predicted", ylab = "Actual",
+     sub = paste("Accuracy:", conf_mat$overall['Accuracy']))
+
+# Add legend
+legend("topright", legend = rownames(confusion_matrix$table), fill = c("#FF0000", "#0000FF"))
+
+```
+
+
+```{r, XGBoost confusionMatrix Table}
+confusion_matrix
+cat("\n")
+cat("Accuracy:", accuracy, "\n")
+cat("Precision:", precision, "\n")
+cat("Recall:", recall, "\n")
+cat("F1-Score:", f1_score, "\n")
+
+
+```
+
+
+```{r, XGBoost ROC plot  of regularized model}
+
+
+roc <- roc(as.numeric(test_y ) - 1, as.numeric(pred_class))
+
+plot(roc, main = "ROC Curve",col = "blue", lwd = 2, xlab = "False Positive Rate", ylab = "True Positive Rate")
+
+
+
+
+```
+
+#### <span style=color:#008000>Regularizaction </span>
+
+
+In binary logistic regression, the goal is to predict the probability of an observation belonging to one of the two possible classes. Regularization is commonly implemented by adding a penalty term to the cost function. There are two common types of regularization used in binary logistic regression: L1 regularization (Lasso) and L2 regularization (Ridge).
+
+The model uses a logistic function to transform a linear combination of the predictor variables into a probability. The coefficients of this linear combination are estimated from the training data using the maximum likelihood method.
+
+The regularization parameter lambda controls the amount of penalty applied. A higher value of lambda results in greater penalty and, therefore, smaller coefficients. Regularization helps prevent overfitting by shrinking the coefficients towards zero, effectively reducing the complexity of the model and improving its generalization performance.
+
+```{r, regularized model }
+
+# Load the ROSE package
+# Cargar el paquete ROSE
+library(ROSE)
+
+# Set the seed for reproducibility
+# Establecer la semilla para la reproducibilidad
+
+set.seed(123)
+
+
+# Split the data into train and test sets
+## Divida los datos en conjuntos de entrenamiento y prueba
+
+train_idx <- sample(nrow(df), 0.7 * nrow(df))
+train_data <- df[train_idx, ]
+test_data <- df[-train_idx, ]
+
+
+# Balance the data using ROSE
+#Equilibrar los datos usando ROSE
+
+balanced_data <- ROSE(Etiqueta_Eco ~ ., data = train_data, p = 0.5)$data
+
+# Set the formula for the logistic regression model
+#Establecer la fórmula para el modelo de regresión logística
+
+formula <- Etiqueta_Eco ~ Club_Producto + Buenas_practicas + Sala_Reuniones + Restaurante +Tienda + Visita_Guiada
+
+#Train control object for cross-validation
+#validación cruzada
+
+control <- trainControl(method = "cv", number = 12)
+
+# Grid search for hyperparameter tuning
+# Cuadrícula para el ajuste de hiperparámetros
+
+tune_grid <- expand.grid(alpha = c(0, 0.5, 1), lambda = c(0.001, 0.01, 0.1, 0.5, 1))
+
+
+# Train the logistic regression model using glmnet
+# Entrenar el modelo de regresión logística usando glmnet
+
+modelo <- train(formula, data = balanced_data, method = "glmnet", trControl = control, tuneGrid = tune_grid)
+print(modelo)
+
+```
+
+```{r plot regularized model}
+
+
+suppressMessages(suppressWarnings(plot(modelo)))
+
+```
+
+```{r, confusion_matrix of regularized model}
+# Make predictions on the test dataset
+predictions <- predict(modelo, newdata = test_data, type = "raw")
+
+# Convert predictions to binary values (0 or 1) based on a threshold
+threshold <- 0.5
+binary_predictions <- ifelse(predictions > threshold, 1, 0)
+
+# Create a factor variable for the predicted values with consistent levels
+predicted_factor <- factor(binary_predictions, levels = c(0, 1))
+
+# Create a factor variable for the actual values with consistent levels
+actual_factor <- factor(test_data$Etiqueta_Eco, levels = c(0, 1))
+
+# Calculate evaluation metrics
+confusion_matrix <- confusionMatrix(predicted_factor, actual_factor)
+accuracy <- confusion_matrix$overall["Accuracy"]
+precision <- confusion_matrix$byClass["Pos Pred Value"]
+recall <- confusion_matrix$byClass["Sensitivity"]
+f1_score <- confusion_matrix$byClass["F1"]
+
+
+plot(confusion_matrix$table, col = c("#FF0000", "#0000FF"), 
+     main = "Confusion Matrix", xlab = "Predicted", ylab = "Actual",
+     sub = paste("Accuracy:", conf_mat$overall['Accuracy']))
+
+# Add legend
+legend("topright", legend = rownames(conf_mat$table), fill = c("#FF0000", "#0000FF"))
+```
+```{r, regularized model confusion_matrix table}
+# Print the evaluation metrics
+print(confusion_matrix)
+cat("\n")
+cat("Accuracy:", accuracy, "\n")
+cat("Precision:", precision, "\n")
+cat("Recall:", recall, "\n")
+cat("F1-Score:", f1_score, "\n")
+
+```
+```{r, ROC plot  of regularized model}
+# Create the ROC curve
+roc <- roc(as.numeric(actual_factor) - 1, predictions)
+roc_plot <- plot(roc, main = "ROC Curve",col = "blue", lwd = 2, xlab = "False Positive Rate", ylab = "True Positive Rate")
+
+# Display the ROC plot
+print(roc_plot)
+
+
+```
+
+References:
+
+* Keita, Z. (2023). Principal Component Analysis in R Tutorial. https://www.datacamp.com/tutorial/pca-analysis-r
+* Rawat, A. (2019, 7 enero). Binary Logistic Regression - Towards Data Science. Medium. https://towardsdatascience.com/implementing-binary-logistic-regression-in-r-7d802a9d98fe
+* what if response variable is «yes or no» in R? (s. f.). Cross Validated. https://stats.stackexchange.com/questions/126996/what-if-response-variable-is-yes-or-no-in-r
+* Amat Rodrigo, J. (2016, agosto). Regresión logística simple y múltiple. https://rpubs.com/.
+* Rawat, A. (2019b, enero 7). Binary Logistic Regression - Towards Data Science. Medium. https://towardsdatascience.com/implementing-binary-logistic-regression-in-r-7d802a9d98fe
+* Bhandari, A. (2023). Guide to AUC ROC Curve in Machine Learning : What Is Specificity? Analytics Vidhya. https://www.analyticsvidhya.com/blog/2020/06/auc-roc-curve-machine-learning/
+* Mulani, S. (2022). Plotting ROC curve in R Programming. DigitalOcean. https://www.digitalocean.com/community/tutorials/plot-roc-curve-r-programming
+* Gráficas de residuos para Ajustar modelo de regresión - Minitab. (s. f.). (C) Minitab, LLC. All rights Reserved. 2021. https://support.minitab.com/es-mx/minitab/20/help-and-how-to/statistical-modeling/regression/how-to/fit-regression-model/interpret-the-results/all-statistics-and-graphs/residual-plots/
+* Vargas, J. A. I. O. H. R. A. T. J. (2022, 10 junio). INFORME REGRESION LINEAL. https://rstudio-pubs-static.s3.amazonaws.com/913247_38e820858d444638b1bc8253a4202bb4.html
+* RPubs -  27.3. Regresión logística binaria (intervalos de confianza). (s. f.). https://rpubs.com/hllinas/R_Logit_Binario_IC
+* Calvo, D. (2018). Validación Cruzada en R. Diego Calvo. https://www.diegocalvo.es/validacion-cruzada-en-r/
+* Avcontentteam. (2020). Practical Guide to deal with Imbalanced Classification Problems in R. Analytics Vidhya. https://www.analyticsvidhya.com/blog/2016/03/practical-guide-deal-imbalanced-classification-problems/
+* Stewart, M., & Stewart, M. (2021, 25 noviembre). Imbalanced Datasets: Complete Guide to Classification | Experfy Insights. Experfy Insights. https://resources.experfy.com/ai-ml/imbalanced-datasets-guide-classification/
+
+
+
