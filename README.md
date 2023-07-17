@@ -8,6 +8,6 @@ http://htmlpreview.github.io/
 
 once there, insert: 
 
-
+https://github.com/ValescaBravo/Smart_Action-Predictive-Model/blob/main/GTH_E.html
 
 Thanks
