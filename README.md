@@ -1,13 +1,36 @@
-# Smart_Action-Predictive-Model
-The aim of this project is to explore the possibility of making predictions using R Studio and different algorithms in order to determine the best-performing algorithm for binary logistic regression
+# Smart Action — Predictive Model (R)
 
+A historical (educational) machine learning project in R, focused on building and evaluating a predictive model and communicating results in a clear, stakeholder-friendly way.
 
-Please use the following web page to see this project:
+## Quick links
+- Live page (GitHub Pages): https://valescabravo.github.io/Smart_Action-Predictive-Model/
+- Full report (HTML): https://valescabravo.github.io/Smart_Action-Predictive-Model/Smart_Action_Predictive_Model.html
+- Repository: https://github.com/ValescaBravo/Smart_Action-Predictive-Model
 
-http://htmlpreview.github.io/
+> Note: This is an educational portfolio artefact. It is not production code and does not claim business impact.
 
-once there, insert: 
+## What this project demonstrates
+- End-to-end analytical workflow in **R / RStudio**
+- Predictive modelling and evaluation (train/test split, baseline comparison, interpretation)
+- Clear reporting: assumptions, limitations, and recommendations framed as proposals
 
-https://github.com/ValescaBravo/Smart_Action-Predictive-Model/blob/main/GTH_E.html
+## Repository contents (high level)
+- `index.html` — curated landing page for GitHub Pages (portfolio-style)
+- `Smart_Action_Predictive_Model.html` — original full output report (HTML)
+- `src/` or `scripts/` — modelling code (if applicable)
+- `data/` — dataset files (if included)
+- `archive/` — older drafts / academic submission files (optional)
 
-Thanks
+## How to view
+### Option 1 — Recommended (no setup)
+Open the live page:
+- https://valescabravo.github.io/Smart_Action-Predictive-Model/
+
+### Option 2 — Open locally
+1. Download the repository as ZIP (or clone it).
+2. Open the HTML report in your browser:
+   - `Smart_Action_Predictive_Model.html`
+
+## Credits
+- Dataset: educational / public-use dataset (as provided in the repository).
+- Analysis and write-up: **Valesca Bravo**.
