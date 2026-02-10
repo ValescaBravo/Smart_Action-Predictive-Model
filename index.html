@@ -1,1 +1,303 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Action — Predictive Model (R) | Valesca Bravo</title>
+  <meta name="description" content="Historical R/ML project: predictive modelling workflow and evaluation, documented for portfolio transparency." />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --navy:#1d085e;
+      --teal:#13d6c1;
+      --teal-dark:#0a9a88;
+
+      --ink:#0b1220;
+      --gray-med:#6c757d;
+      --gray-dark:#343a40;
+
+      --border: rgba(19,214,193,0.35);
+
+      --radius: 18px;
+      --shadow-float: 0 26px 70px rgba(0,0,0,0.30);
+      --shadow-card: 0 14px 30px rgba(0,0,0,0.14);
+    }
+
+    body{
+      margin:0;
+      font-family:'Inter', sans-serif;
+      background: var(--navy);
+      color: white;
+    }
+
+    .mag-texture{
+      background-image:
+        radial-gradient(900px 420px at 18% 10%, rgba(19,214,193,0.18), transparent 60%),
+        radial-gradient(780px 380px at 82% 12%, rgba(255,255,255,0.10), transparent 55%),
+        linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px);
+      background-size: auto, auto, 56px 56px, 56px 56px;
+    }
+
+    .panel{
+      background: rgba(255,255,255,0.98);
+      color: var(--ink);
+      border-radius: 28px;
+      box-shadow: var(--shadow-float);
+      border: 1px solid rgba(255,255,255,0.18);
+    }
+
+    .card{
+      background: rgba(255,255,255,0.98);
+      color: var(--ink);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-card);
+    }
+
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(29,8,94,0.06);
+      border: 1px solid rgba(29,8,94,0.14);
+      color: var(--navy);
+      font-weight: 800;
+      font-size: 12px;
+      letter-spacing: 0.01em;
+    }
+
+    .kicker{
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(19,214,193,0.95);
+    }
+
+    .headline{
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1.02;
+    }
+
+    .headline-accent{
+      color: var(--teal);
+      text-shadow: 0 10px 30px rgba(19,214,193,0.18);
+    }
+
+    .btn-primary{
+      background: var(--navy);
+      color: white;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-weight: 900;
+      box-shadow: 0 14px 26px rgba(29,8,94,0.28);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .btn-primary:hover{ background:#12043f; }
+
+    .btn-teal{
+      background: var(--teal);
+      color: #061013;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-weight: 900;
+      box-shadow: 0 14px 26px rgba(19,214,193,0.26);
+      border: 1px solid rgba(6,16,19,0.10);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .btn-teal:hover{ background: var(--teal-dark); }
+
+    .btn-ghost{
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-weight: 900;
+      border: 1px solid rgba(255,255,255,0.22);
+      color: white;
+      background: rgba(255,255,255,0.06);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .btn-ghost:hover{ background: rgba(255,255,255,0.10); }
+
+    .link{
+      color: var(--navy);
+      font-weight: 800;
+    }
+    .link:hover{ text-decoration: underline; }
+
+    .navglass{
+      background: rgba(10,8,30,0.40);
+      border: 1px solid rgba(255,255,255,0.14);
+      backdrop-filter: blur(10px);
+      border-radius: 18px;
+    }
+
+    .rule{ height: 1px; background: rgba(19,214,193,0.30); width: 100%; }
+
+    section{ scroll-margin-top: 110px; }
+  </style>
+</head>
+
+<body>
+  <header class="sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 py-4">
+      <div class="navglass px-4 py-3 flex items-center justify-between">
+        <div class="leading-tight">
+          <p class="text-xs font-semibold opacity-80">Repository</p>
+          <p class="text-base font-extrabold">Smart Action — Predictive Model</p>
+        </div>
+
+        <nav class="hidden md:flex items-center gap-7 text-sm font-semibold opacity-90">
+          <a href="#overview" class="hover:opacity-100">Overview</a>
+          <a href="#method" class="hover:opacity-100">Method</a>
+          <a href="#links" class="hover:opacity-100">Links</a>
+        </nav>
+
+        <a class="btn-ghost" href="https://github.com/ValescaBravo/Smart_Action-Predictive-Model" target="_blank" rel="noopener">
+          View on GitHub
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <section class="mag-texture">
+    <div class="max-w-6xl mx-auto px-6 pt-10 pb-10">
+
+      <div class="panel p-8 md:p-12">
+        <p class="kicker">R · MACHINE LEARNING · HISTORICAL PROJECT</p>
+
+        <h1 class="headline text-4xl md:text-6xl mt-3">
+          Smart Action
+          <span class="headline-accent">predictive model</span>
+        </h1>
+
+        <p class="mt-5 text-base md:text-lg" style="color: var(--gray-dark); max-width: 80ch;">
+          A legacy (educational) predictive modelling project in R, preserved for portfolio transparency. The focus is on the modelling workflow and evaluation, not business impact claims.
+        </p>
+
+        <div class="mt-6 flex flex-wrap gap-3">
+          <a class="btn-teal" href="./SmartAction_Thesis_Upgraded.html">Open full report (HTML)</a>
+
+          <a class="btn-primary" href="https://github.com/ValescaBravo/Smart_Action-Predictive-Model" target="_blank" rel="noopener">Repository (code)</a>
+        </div>
+
+        <div class="mt-7 flex flex-wrap gap-2">
+          <span class="chip">R / RStudio</span>
+          <span class="chip">Predictive modelling</span>
+          <span class="chip">Model evaluation</span>
+          <span class="chip">Documentation</span>
+        </div>
+      </div>
+
+      <div class="mt-8 grid md:grid-cols-3 gap-4">
+        <div class="card p-5">
+          <p class="text-xs font-extrabold" style="color: var(--teal-dark); letter-spacing:0.12em; text-transform:uppercase;">Purpose</p>
+          <p class="mt-2 text-sm" style="color: var(--gray-dark);">
+            Preserve an earlier modelling project in a clean, recruiter-readable format.
+          </p>
+        </div>
+
+        <div class="card p-5">
+          <p class="text-xs font-extrabold" style="color: var(--teal-dark); letter-spacing:0.12em; text-transform:uppercase;">What to look for</p>
+          <p class="mt-2 text-sm" style="color: var(--gray-dark);">
+            Problem framing, feature preparation, modelling approach, and evaluation logic.
+          </p>
+        </div>
+
+        <div class="card p-5">
+          <p class="text-xs font-extrabold" style="color: var(--teal-dark); letter-spacing:0.12em; text-transform:uppercase;">Caveat</p>
+          <p class="mt-2 text-sm" style="color: var(--gray-dark);">
+            Educational work; results are dataset-specific and not presented as causal impact.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <main class="max-w-6xl mx-auto px-6 pb-16">
+
+    <section id="overview" class="pt-10">
+      <p class="kicker">Summary</p>
+      <h2 class="text-3xl md:text-4xl font-extrabold mt-2">Overview</h2>
+      <div class="mt-6 rule"></div>
+
+      <div class="mt-6 grid lg:grid-cols-2 gap-6">
+        <div class="card p-6">
+          <h3 class="text-lg font-extrabold" style="color: var(--navy);">What this contains</h3>
+          <ul class="mt-3 text-sm" style="color: var(--gray-dark);">
+            <li>Problem statement and approach</li>
+            <li>Data preparation and modelling workflow</li>
+            <li>Evaluation and interpretation (without overstating impact)</li>
+            <li>Documented outputs for review</li>
+          </ul>
+        </div>
+
+        <div class="card p-6">
+          <h3 class="text-lg font-extrabold" style="color: var(--navy);">Why it’s kept</h3>
+          <p class="mt-3 text-sm" style="color: var(--gray-dark);">
+            This repository is maintained as a historical artefact. It shows early modelling foundations and reporting discipline, even if it is not part of the “featured” portfolio set.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="method" class="pt-12">
+      <div class="mt-10 rule"></div>
+      <p class="kicker mt-10">Method</p>
+      <h2 class="text-3xl md:text-4xl font-extrabold mt-2">Approach (high level)</h2>
+
+      <div class="card p-6 mt-5">
+        <ol class="list-decimal ml-5 text-sm" style="color: var(--gray-dark);">
+          <li>Define the prediction task and evaluation approach (baseline vs model).</li>
+          <li>Prepare data (types, missingness, feature selection/engineering as documented).</li>
+          <li>Train the model and check performance on a hold-out set.</li>
+          <li>Interpret outputs cautiously and document limitations.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="links" class="pt-12">
+      <div class="mt-10 rule"></div>
+      <p class="kicker mt-10">Links & credits</p>
+      <h2 class="text-3xl md:text-4xl font-extrabold mt-2">Links</h2>
+
+      <div class="card p-6 mt-5">
+        <ul class="text-sm" style="color: var(--gray-dark);">
+          <li>
+            <a class="link" href="./Smart_Action_Predictive_Model.html">Full report (HTML)</a>
+            <span style="color: var(--gray-med);"> — open in browser</span>
+          </li>
+          <li class="mt-2">
+            <a class="link" href="https://github.com/ValescaBravo/Smart_Action-Predictive-Model" target="_blank" rel="noopener">Repository (code)</a>
+          </li>
+        </ul>
+
+        <p class="mt-5 text-sm" style="color: var(--gray-dark);">
+          <strong>Credits:</strong> educational project maintained by <strong>Valesca Bravo</strong>. Dataset and outputs are included for learning and review.
+        </p>
+      </div>
+    </section>
+
+    <footer class="pt-14 text-sm opacity-80">
+      © 2026 Valesca Bravo · NAVY #1d085e · TEAL #13d6c1 · TEAL_DARK #0a9a88
+    </footer>
+
+  </main>
+</body>
+</html>
 
