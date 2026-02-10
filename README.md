@@ -14,13 +14,6 @@ A historical (educational) machine learning project in R, focused on building an
 - Predictive modelling and evaluation (train/test split, baseline comparison, interpretation)
 - Clear reporting: assumptions, limitations, and recommendations framed as proposals
 
-## Repository contents (high level)
-- `index.html` — curated landing page for GitHub Pages (portfolio-style)
-- `Smart_Action_Predictive_Model.html` — original full output report (HTML)
-- `src/` or `scripts/` — modelling code (if applicable)
-- `data/` — dataset files (if included)
-- `archive/` — older drafts / academic submission files (optional)
-
 ## How to view
 ### Option 1 — Recommended (no setup)
 Open the live page:
